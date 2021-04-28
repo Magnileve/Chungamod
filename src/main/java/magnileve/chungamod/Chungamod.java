@@ -7,8 +7,9 @@ import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Logger;
 
+import magnileve.chungamod.settings.Settings;
 import magnileve.chungamod.time.TickTimer;
 
 @Mod(modid = Ref.MODID, name = Ref.NAME, version = Ref.VERSION, acceptedMinecraftVersions = Ref.ACCEPTED_MINECRAFT_VERSIONS)
@@ -23,7 +24,7 @@ public class Chungamod {
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
     	mc = Minecraft.getMinecraft();
-        log = event.getModLog();
+        log = (Logger) event.getModLog();
         log.info(Ref.MODID + ":Pre-Initialization");
         Settings.load(log);
         Ref.init(mc);

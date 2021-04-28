@@ -5,14 +5,15 @@ import net.minecraft.util.math.BlockPos;
 
 public class StorageUnit {
 
-private BlockPos location;
-private String shulkerName;
-private byte height;
-private byte fillHeight;
-private EnumFacing facing;
-private boolean doubleChest;
+private final BlockPos location;
+private final String shulkerName;
+private final byte height;
+private final EnumFacing facing;
+private final boolean doubleChest;
 
-protected StorageUnit(BlockPos location, String shulkerName, byte height, EnumFacing facing, boolean doubleChest) {
+private byte fillHeight;
+
+public StorageUnit(BlockPos location, String shulkerName, byte height, EnumFacing facing, boolean doubleChest) {
 	this.location = location;
 	this.shulkerName = shulkerName;
 	this.height = height;
@@ -21,28 +22,33 @@ protected StorageUnit(BlockPos location, String shulkerName, byte height, EnumFa
 	this.doubleChest = doubleChest;
 }
 
-protected String getName() {
+@Override
+public String toString() {
+	return (height + (doubleChest ? " double chest" : " single chest") + (height > 1 ? "s" : "") + " for " + shulkerName + " at " + location);
+}
+
+public String getName() {
 	return shulkerName;
 }
 
-protected BlockPos getBlockPos() {
+public BlockPos getBlockPos() {
 	return location;
 }
 
-protected byte getFillHeight() {
+public byte getFillHeight() {
 	return fillHeight;
 }
 
-protected boolean nextUp() {
+public boolean nextUp() {
 	fillHeight++;
 	return fillHeight < height;
 }
 
-protected EnumFacing getFacing() {
+public EnumFacing getFacing() {
 	return facing;
 }
 
-protected boolean doubleChest() {
+public boolean isDoubleChest() {
 	return doubleChest;
 }
 

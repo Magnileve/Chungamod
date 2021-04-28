@@ -2,7 +2,7 @@ package magnileve.chungamod.time;
 
 import java.util.LinkedList;
 
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Logger;
 
 import magnileve.chungamod.Ref;
 import net.minecraftforge.fml.common.Mod;
@@ -19,39 +19,43 @@ private static LinkedList<Integer> listenTicks;
 private static LinkedList<TickListener> listeners;
 private static Logger log;
 
-public static void init(Logger logger) {
+public static void init(Logger logIn) {
 	tick = 0;
 	listenTicks = new LinkedList<Integer>();
 	listeners = new LinkedList<TickListener>();
-	log = logger;
+	log = logIn;
 }
 
 @SubscribeEvent
 @SideOnly(value = Side.CLIENT)
 public static void onTick(ClientTickEvent event) {
 	tick++;
-	if(!listenTicks.isEmpty() && listenTicks.peekFirst() == tick) {
+	if(!listenTicks.isEmpty() && listenTicks.getFirst() == tick) {
 		listenTicks.remove();
 		for(TickListener listener:listeners) listener.onTick(tick);
 	}
 }
 
 public static void add(int futureTicks) {
-	if (futureTicks > 0) {
-		futureTicks += tick;
+	if(futureTicks > 0) {
 		int i = 0;
-		if(listenTicks.isEmpty()) listenTicks.add(i, futureTicks);
-		else for(int tickCount:listenTicks) {
-			if(tickCount > tick) {
-				listenTicks.add(i, futureTicks);
-				break;
+		if(listenTicks.isEmpty()) {
+			listenTicks.add(tick + futureTicks);
+			return;
+		}
+		for(int tickCount:listenTicks) {
+			if(tickCount > tick + futureTicks) {
+				listenTicks.add(i, tick + futureTicks);
+				return;
 			}
-			if(tickCount == tick) break;
+			if(tickCount == tick + futureTicks) return;
 			i++;
 		}
+		listenTicks.add(tick + futureTicks);
+		
 	} else {
-		log.fatal("Trying to add a tick in the past to the tick listener");
-		throw new RuntimeException("Trying to add a tick in the past to the tick listener");
+		log.error("Trying to add a tick in the past to the tick listener: " + futureTicks);
+		throw new NumberFormatException("Value must be above 0. Value: \"" + futureTicks + "\"");
 	}
 }
 
@@ -60,10 +64,7 @@ public static void addListener(TickListener listener) {
 }
 
 public static void removeListener(TickListener listener) {
-	for(TickListener recordedListener:listeners) if(recordedListener == listener) {
-		listeners.remove(listener);
-		break;
-	}
+	listeners.remove(listener);
 }
 
 public static int current() {

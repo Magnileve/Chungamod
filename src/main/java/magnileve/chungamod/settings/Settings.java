@@ -1,4 +1,4 @@
-package magnileve.chungamod;
+package magnileve.chungamod.settings;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -7,8 +7,11 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Map.Entry;
 
-import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.Logger;
 
 import net.minecraft.util.math.BlockPos;
 
@@ -16,15 +19,19 @@ public class Settings {
 
 private static final HashMap<String, Object> SETTING_VALUES = settingValues();
 private static final HashMap<String, Object> DEFAULT_SETTINGS = defaultSettings();
+public static final String SETTINGS_LIST = settingList();
 private static Logger log;
 private static HashMap<String, Object> settings;
+private static LinkedList<SettingListener> listeners;
 
 private static final HashMap<String, Object> settingValues() {
 	HashMap<String, Object> settingValues = new HashMap<>();
 	settingValues.put("prefix", Type.STRING_ONE_WORD);
-	settingValues.put("discordrpc", Type.BOOLEAN);
+	Object[] discordRPCSettings = {"visible upper_line lower_line minecraft_name minecraft_version", Type.BOOLEAN, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE};
+	settingValues.put("discordrpc", discordRPCSettings);
 	settingValues.put("debug", Type.BOOLEAN);
-	Object[] autoSortSettings = {"pos1 pos2 source sourceemptyimeout overflow", Type.BLOCKPOS, Type.BLOCKPOS, Type.BLOCKPOS, Type.SHORT, Type.BLOCKPOS};
+	settingValues.put("tickdelay", Type.BYTE_POSITIVE);
+	Object[] autoSortSettings = {"pos1 pos2 source chest_open_tick_delay source_empty_timeout overflow", Type.BLOCKPOS, Type.BLOCKPOS, Type.BLOCKPOS, Type.SHORT, Type.SHORT, Type.BLOCKPOS};
 	settingValues.put("autosort", autoSortSettings);
 	return settingValues;
 }
@@ -32,11 +39,20 @@ private static final HashMap<String, Object> settingValues() {
 private static final HashMap<String, Object> defaultSettings() {
 	HashMap<String, Object> defaultSettings = new HashMap<>();
 	defaultSettings.put("prefix", ",");
-	defaultSettings.put("discordrpc", true);
+	Object[] discordRPCSettings = {"visible upper_line lower_line minecraft_name minecraft_version", true, new Byte((byte) 1), new Byte((byte) 2), new Byte((byte) 1), new Byte((byte) 1)};
+	defaultSettings.put("discordrpc", discordRPCSettings);
 	defaultSettings.put("debug", false);
-	Object[] autoSortSettings = {"pos1 pos2 source sourceemptytimeout overflow", null, null, null, new Short((short) 2), null};
+	defaultSettings.put("tickdelay", new Byte((byte) 2));
+	Object[] autoSortSettings = {"pos1 pos2 source chest_open_tick_delay source_empty_timeout overflow", null, null, null, new Short((short) 2), new Short((short) 2), null};
 	defaultSettings.put("autosort", autoSortSettings);
 	return defaultSettings;
+}
+
+private static final String settingList() {
+	Iterator<Entry<String, Object>> iterator = SETTING_VALUES.entrySet().iterator();
+	StringBuilder str = new StringBuilder().append(iterator.next().getKey());
+	while(iterator.hasNext()) str.append(", " + iterator.next().getKey());
+	return str.toString();
 }
 
 public static Object get(String setting) {
@@ -82,6 +98,7 @@ public static void set(String setting, Object value) {
 	}
 	settings.put(setting, value);
 	save(settings);
+	for(SettingListener listener:listeners) if(listener.hasSetting(setting)) listener.onNewValue(setting, value);
 }
 
 public static void set(String feature, String setting, Object value) {
@@ -108,6 +125,7 @@ public static void set(String feature, String setting, Object value) {
 		settings.put(feature, featureSettings);
 	}
 	save(settings);
+	for(SettingListener listener:listeners) if(listener.hasSetting(feature + " " + setting)) listener.onNewValue(setting, value);
 }
 
 public static Object getValue(String setting) {
@@ -122,8 +140,16 @@ public static Class<?> getValue(String feature, String setting) {
 	return (Class<?>) featureSettings[i + 1];
 }
 
+public static void addListener(SettingListener listener) {
+	listeners.add(listener);
+}
+
+public static void removeListener(SettingListener listener) {
+	listeners.remove(listener);
+}
+
 @SuppressWarnings("unchecked")
-protected static void load(Logger logger) {
+public static void load(Logger logger) {
 	log = logger;
 	HashMap<String, Object> loadedSettings;
 	Object getSettingsResult = null;
@@ -169,6 +195,7 @@ protected static void load(Logger logger) {
 		save(loadedSettings);
 	}
 	settings = loadedSettings;
+	listeners = new LinkedList<SettingListener>();
 }
 
 private static void save(HashMap<String, Object> settings) {
@@ -185,7 +212,7 @@ private static void save(HashMap<String, Object> settings) {
 }
 
 public static enum Type {
-	OBJECT_ARRAY, STRING, BOOLEAN, BLOCKPOS, SHORT, STRING_ONE_WORD
+	OBJECT_ARRAY, STRING, STRING_ONE_WORD, BOOLEAN, BLOCKPOS, BYTE, BYTE_POSITIVE, SHORT
 }
 
 }
