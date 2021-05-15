@@ -7,39 +7,43 @@ import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.Logger;
 
+import magnileve.chungamod.settings.CustomChatSuffix;
 import magnileve.chungamod.settings.Settings;
+import magnileve.chungamod.time.LeaveServerListener;
 import magnileve.chungamod.time.TickTimer;
 
-@Mod(modid = Ref.MODID, name = Ref.NAME, version = Ref.VERSION, acceptedMinecraftVersions = Ref.ACCEPTED_MINECRAFT_VERSIONS)
-public class Chungamod {
+@Mod(modid = Chung.MODID, name = Chung.NAME, version = Chung.VERSION, acceptedMinecraftVersions = Chung.ACCEPTED_MINECRAFT_VERSIONS)
+public class ChungamodInitialization {
 
 	private static Minecraft mc;
     private static Logger log;
     
     @Instance
-    public static Chungamod instance;
+    public static ChungamodInitialization instance;
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
     	mc = Minecraft.getMinecraft();
         log = (Logger) event.getModLog();
-        log.info(Ref.MODID + ":Pre-Initialization");
-        Settings.load(log);
-        Ref.init(mc);
+        log.info(Chung.MODID + ": Pre-Initialization");
+        Settings.init(log);
+        Chung.init(mc);
         TickTimer.init(log);
-        Commands.init(mc, log);
     }
 
     @EventHandler
     public void init(FMLInitializationEvent event) {
-        log.info(Ref.MODID + ":Initialization");
+        log.info(Chung.MODID + ": Initialization");
+        Commands.init(mc, log);
+        LeaveServerListener.init(mc, log);
     }
     
     @EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-    	log.info(Ref.MODID + ":Post-Initialization");
+    	log.info(Chung.MODID + ": Post-Initialization");
     	Commands.init2();
+    	CustomChatSuffix.init(mc, log);
     }
 }

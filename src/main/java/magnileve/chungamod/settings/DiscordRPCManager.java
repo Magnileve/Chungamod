@@ -1,6 +1,6 @@
 package magnileve.chungamod.settings;
 
-import magnileve.chungamod.Ref;
+import magnileve.chungamod.Chung;
 import net.arikia.dev.drpc.DiscordEventHandlers;
 import net.arikia.dev.drpc.DiscordRPC;
 import net.arikia.dev.drpc.DiscordRichPresence;
@@ -8,7 +8,7 @@ import net.arikia.dev.drpc.DiscordRichPresence;
 public class DiscordRPCManager implements SettingListener {
 
 private final String[] SETTING_LIST = {"visible", "upper_line", "lower_line", "minecraft_name", "minecraft_version"};
-private final String[] STATUS_LIST = {"Playing \\Mincerfat \\version", "The funniest client", "Version " + Ref.VERSION, "v" + Ref.VERSION + " | \\Mincerfat \\version", "9b9t.org", "9b9t.com", "2b2t.org", "2b2t.com", "Hypixel.net", "All hail Big Chungus", "Big Chungus on top", "ok", "ok chains on top", "Building highways", "Digging nether tunnels", "NHS on top", "Chungamod on top", "Chungia on top", "NHS > HWU", "9b9t > 2b2t"};
+private final String[] STATUS_LIST = {"Playing \\Mincerfat \\version", "The funniest client", "Version " + Chung.VERSION, "v" + Chung.VERSION + " | \\Mincerfat \\version", "9b9t.org", "9b9t.com", "2b2t.org", "2b2t.com", "Hypixel.net", "All hail Big Chungus", "Big Chungus on top", "ok", "ok chains on top", "Building highways", "Digging nether tunnels", "NHS on top", "Chungamod on top", "Chungia on top", "9b9t on top", "9b9t > 2b2t"};
 private final String[] MINCERFAT_NAME_LIST = {"Minecraft", "Mincerfat", "Minceraft", "block game"};
 private final String[] MINCERFAT_VERSION_LIST = {"1.12", "1.12.2"};
 private final long START_TIME;
@@ -22,7 +22,7 @@ private byte mincerfatVersion;
 
 public DiscordRPCManager() {
 	 START_TIME = System.currentTimeMillis() / 1000;
-	 java.lang.Runtime.getRuntime().addShutdownHook(new Thread() {
+	 Runtime.getRuntime().addShutdownHook(new Thread() {
 			@Override
 			public void run() {
 				if((boolean) Settings.get("discordrpc", "visible")) DiscordRPC.discordShutdown();
@@ -45,25 +45,25 @@ public void onNewValue(String setting, Object value) {
 	switch(setting) {
 	case "upper_line":
 		if((byte) value > STATUS_LIST.length) {
-			Ref.sendMessage("Value must not be greater than " + STATUS_LIST.length);
+			Chung.sendMessage("Value must not be greater than " + STATUS_LIST.length);
 			Settings.set("discordrpc", setting, details);
 		} else details = (byte) value;
 		break;
 	case "lower_line":
 		if((byte) value > STATUS_LIST.length) {
-			Ref.sendMessage("Value must not be greater than " + STATUS_LIST.length);
+			Chung.sendMessage("Value must not be greater than " + STATUS_LIST.length);
 			Settings.set("discordrpc", setting, state);
 		} else state = (byte) value;
 		break;
 	case "minecraft_name":
 		if((byte) value > STATUS_LIST.length) {
-			Ref.sendMessage("Value must not be greater than " + MINCERFAT_NAME_LIST.length);
+			Chung.sendMessage("Value must not be greater than " + MINCERFAT_NAME_LIST.length);
 			Settings.set("discordrpc", setting, mincerfatName);
 		} else mincerfatName = (byte) value;
 		break;
 	case "minecraft_version":
 		if((byte) value > STATUS_LIST.length) {
-			Ref.sendMessage("Value must not be greater than " + MINCERFAT_VERSION_LIST.length);
+			Chung.sendMessage("Value must not be greater than " + MINCERFAT_VERSION_LIST.length);
 			Settings.set("discordrpc", setting, mincerfatVersion);
 		} else mincerfatVersion = (byte) value;
 		break;
@@ -109,7 +109,6 @@ public String getSettingValues() {
 	return str.toString();
 }
 
-//setup DiscordRPC
 private void discordRPCupdate() {
 	DiscordRPC.discordUpdatePresence(new DiscordRichPresence.Builder(format(STATUS_LIST[state - 1])).setBigImage("chungamod-logo", "All hail Big Chungus").setDetails(format(STATUS_LIST[details - 1])).setStartTimestamps(START_TIME).build());
 }

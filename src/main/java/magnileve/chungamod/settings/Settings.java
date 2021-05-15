@@ -11,7 +11,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map.Entry;
 
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.Logger;
 
 import net.minecraft.util.math.BlockPos;
 
@@ -30,9 +30,11 @@ private static final HashMap<String, Object> settingValues() {
 	Object[] discordRPCSettings = {"visible upper_line lower_line minecraft_name minecraft_version", Type.BOOLEAN, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE, Type.BYTE_POSITIVE};
 	settingValues.put("discordrpc", discordRPCSettings);
 	settingValues.put("debug", Type.BOOLEAN);
-	settingValues.put("tickdelay", Type.BYTE_POSITIVE);
+	settingValues.put("tick_delay", Type.BYTE_POSITIVE);
 	Object[] autoSortSettings = {"pos1 pos2 source chest_open_tick_delay source_empty_timeout overflow", Type.BLOCKPOS, Type.BLOCKPOS, Type.BLOCKPOS, Type.SHORT, Type.SHORT, Type.BLOCKPOS};
 	settingValues.put("autosort", autoSortSettings);
+	Object[] chatSuffixSettings = {"on suffix ignored_prefixes add_space", Type.BOOLEAN, Type.STRING, Type.STRING, Type.BOOLEAN};
+	settingValues.put("custom_chat_suffix", chatSuffixSettings);
 	return settingValues;
 }
 
@@ -42,9 +44,11 @@ private static final HashMap<String, Object> defaultSettings() {
 	Object[] discordRPCSettings = {"visible upper_line lower_line minecraft_name minecraft_version", true, new Byte((byte) 1), new Byte((byte) 2), new Byte((byte) 1), new Byte((byte) 1)};
 	defaultSettings.put("discordrpc", discordRPCSettings);
 	defaultSettings.put("debug", false);
-	defaultSettings.put("tickdelay", new Byte((byte) 2));
+	defaultSettings.put("tick_delay", new Byte((byte) 2));
 	Object[] autoSortSettings = {"pos1 pos2 source chest_open_tick_delay source_empty_timeout overflow", null, null, null, new Short((short) 2), new Short((short) 2), null};
 	defaultSettings.put("autosort", autoSortSettings);
+	Object[] chatSuffixSettings = {"on suffix ignored_prefixes add_space", true, "`Chungamod", "\"/\"", true};
+	defaultSettings.put("custom_chat_suffix", chatSuffixSettings);
 	return defaultSettings;
 }
 
@@ -55,8 +59,24 @@ private static final String settingList() {
 	return str.toString();
 }
 
+public static void init(Logger logIn) {
+	log = logIn;
+	settings = load();
+	listeners = new LinkedList<SettingListener>();
+}
+
+/**
+ * Gets the value of a setting that is not a feature setting.
+ * @param setting name of setting
+ * @return value of setting
+ */
 public static Object get(String setting) {
 	Object returnSetting = settings.get(setting);
+	if(returnSetting == null && getValue(setting) instanceof Type && (Type) getValue(setting) != Type.BLOCKPOS) {
+		log.error("Setting null for " + setting);
+		settings.put(setting, DEFAULT_SETTINGS.get(setting));
+		returnSetting = settings.get(setting);
+	}
 	if(returnSetting instanceof Integer[]) {
 		Integer[] integersValue = (Integer[]) returnSetting;
 		BlockPos blockPosValue = new BlockPos(integersValue[0], integersValue[1], integersValue[2]);
@@ -65,6 +85,12 @@ public static Object get(String setting) {
 	return returnSetting;
 }
 
+/**
+ * Gets the value of a setting that is a feature setting.
+ * @param feature name of feature
+ * @param setting name of setting
+ * @return value of setting
+ */
 public static Object get(String feature, String setting) {
 	Object returnSetting;
 	try {
@@ -90,6 +116,11 @@ public static Object get(String feature, String setting) {
 	return returnSetting;
 }
 
+/**
+ * Sets the value of a setting that is not a feature setting.
+ * @param setting name of setting
+ * @param value new value of setting
+ */
 public static void set(String setting, Object value) {
 	if(value instanceof BlockPos) {
 		BlockPos blockPosValue = (BlockPos) value;
@@ -101,6 +132,12 @@ public static void set(String setting, Object value) {
 	for(SettingListener listener:listeners) if(listener.hasSetting(setting)) listener.onNewValue(setting, value);
 }
 
+/**
+ * Sets the value of a setting that is a feature setting.
+ * @param feature name of feature
+ * @param setting name of setting
+ * @param value new value of setting
+ */
 public static void set(String feature, String setting, Object value) {
 	if(value instanceof BlockPos) {
 		BlockPos blockPosValue = (BlockPos) value;
@@ -128,29 +165,33 @@ public static void set(String feature, String setting, Object value) {
 	for(SettingListener listener:listeners) if(listener.hasSetting(feature + " " + setting)) listener.onNewValue(setting, value);
 }
 
+/**
+ * Gets the type of value for a setting.
+ * @param setting name of setting
+ * @return type of value the setting holds
+ */
 public static Object getValue(String setting) {
 	return SETTING_VALUES.get(setting);
 }
 
-public static Class<?> getValue(String feature, String setting) {
-	Object[] featureSettings = (Object[]) SETTING_VALUES.get(feature);
-	String[] settingNames = ((String) (featureSettings[0])).split(" ");
-	byte i = 0;
-	while(!settingNames[i].equalsIgnoreCase(setting)) i++;
-	return (Class<?>) featureSettings[i + 1];
-}
-
+/**
+ * Adds listener for changing setting values
+ * @param listener listener to be added
+ */
 public static void addListener(SettingListener listener) {
 	listeners.add(listener);
 }
 
+/**
+ * Removes listener for changing setting values
+ * @param listener listener to be removed
+ */
 public static void removeListener(SettingListener listener) {
 	listeners.remove(listener);
 }
 
 @SuppressWarnings("unchecked")
-public static void load(Logger logger) {
-	log = logger;
+private static HashMap<String, Object> load() {
 	HashMap<String, Object> loadedSettings;
 	Object getSettingsResult = null;
 	HashMap<String, Object> getSettings;
@@ -194,8 +235,7 @@ public static void load(Logger logger) {
 		loadedSettings = DEFAULT_SETTINGS;
 		save(loadedSettings);
 	}
-	settings = loadedSettings;
-	listeners = new LinkedList<SettingListener>();
+	return loadedSettings;
 }
 
 private static void save(HashMap<String, Object> settings) {

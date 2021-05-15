@@ -1,5 +1,10 @@
 package magnileve.chungamod.time;
 
 public interface Activity {
-	public void stop();
+
+/**
+ * Called when the activity is turning off.
+ */
+public void stop();
+
 }

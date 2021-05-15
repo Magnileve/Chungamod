@@ -1,11 +1,11 @@
-package magnileve.chungamod.itemstorage;
+package magnileve.chungamod.auto.itemstorage;
 
 import java.util.LinkedList;
 
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.Logger;
 
-import magnileve.chungamod.Ref;
+import magnileve.chungamod.Chung;
 import magnileve.chungamod.settings.Settings;
 import magnileve.chungamod.time.Activity;
 import magnileve.chungamod.time.TickListener;
@@ -55,10 +55,29 @@ private byte stuckCheck;
 private EnumFacing destinationOffset;
 private boolean goToOverflow;
 
+/**
+ * Automatically sorts shulker boxes into chests with the shulker boxes' names labeled on signs.
+ * @param mcIn instance of Mincerfat
+ * @param pos1 looks for signs with shulker box names connected to a stack of chests between this and pos2
+ * @param pos2 looks for signs with shulker box names connected to a stack of chests between this and pos1
+ * @param sourceIn takes shulker boxes out of the chest at this location
+ * @param sourceEmptyTimeout how many seconds to wait when the source is empty before stopping
+ * @param overflowIn where to put shulker boxes which either don't have a designated chest or have full storage
+ * @param logIn instance of logger
+ */
 public AutoSort(Minecraft mcIn, BlockPos pos1, BlockPos pos2, BlockPos sourceIn, short sourceEmptyTimeout, BlockPos overflowIn, Logger logIn) {
 	this(mcIn, getStorageUnits(mcIn, pos1, pos2, logIn), sourceIn, sourceEmptyTimeout, overflowIn, logIn);
 }
 
+/**
+ * Automatically sorts shulker boxes into chests with the shulker boxes' names labeled on signs.
+ * @param mcIn instance of Mincerfat
+ * @param sortLocationsIn stacks of chests to put shulker boxes with matching names into
+ * @param sourceIn takes shulker boxes out of the chest at this location
+ * @param sourceEmptyTimeout how many seconds to wait when the source is empty before stopping
+ * @param overflowIn where to put shulker boxes which either don't have a designated chest or have full storage
+ * @param logIn instance of logger
+ */
 public AutoSort(Minecraft mcIn, LinkedList<StorageUnit> sortLocationsIn, BlockPos sourceIn, short sourceEmptyTimeout, BlockPos overflowIn, Logger logIn) {
 	mc = mcIn;
 	connection = mc.player.connection;
@@ -71,8 +90,8 @@ public AutoSort(Minecraft mcIn, LinkedList<StorageUnit> sortLocationsIn, BlockPo
 	goToOverflow = false;
 	if(sortLocations == null || source.getDistance((int) mc.player.posX, (int) mc.player.posY, (int) mc.player.posZ) > 250 ||
 			(overflow == null ? false : overflow.getDistance((int) mc.player.posX, (int) mc.player.posY, (int) mc.player.posZ) > 250)) {
-		Ref.sendMessage("AutoSort error: Chests too far away");
-		Ref.runningActivities.remove(this);
+		Chung.sendMessage("AutoSort error: Chests too far away");
+		Chung.runningActivities.remove(this);
 		sourceFacing = null;
 		overflowFacing = null;
 		sourceDoubleChest = false;
@@ -115,8 +134,7 @@ public AutoSort(Minecraft mcIn, LinkedList<StorageUnit> sortLocationsIn, BlockPo
 	slot = 9;
 	status = Status.SEARCHING_STORAGE;
 	TickTimer.addListener(this);
-	nextTick(1);
-	log.debug("finished initialization");
+	nextTick = nextTick(1);
 }
 
 private static LinkedList<StorageUnit> getStorageUnits(Minecraft mc, BlockPos pos1, BlockPos pos2, Logger log) {
@@ -170,7 +188,7 @@ private static LinkedList<StorageUnit> getStorageUnits(Minecraft mc, BlockPos po
 }
 
 @Override
-public void onTick(int tick) {
+public boolean onTick(int tick) {
 if(tick == nextTick) {
 	try {
 	switch(status) {
@@ -194,13 +212,11 @@ if(tick == nextTick) {
 				}
 			}
 			double dz = destination.getZ() - mc.player.posZ + 0.5;
-			log.debug("Start chest coords: " + (dx + mc.player.posX) + ", " + (dy + mc.player.posY) + ", " + (dz + mc.player.posZ));
 			
 			double yawToPlayer = -Math.atan2(dx, dz) + Math.PI;
 			double edgeOfBlockRadius = Math.min(Math.abs(1 / Math.cos(yawToPlayer)), Math.abs(1 / Math.sin(yawToPlayer))) / 2;
 			dx += -Math.sin(yawToPlayer) * edgeOfBlockRadius;
 			dz += Math.cos(yawToPlayer) * edgeOfBlockRadius;
-			log.debug("Shifted chest coords: " + (dx + mc.player.posX) + ", " + (dy + mc.player.posY) + ", " + (dz + mc.player.posZ));
 			
 			double r = Math.sqrt(dx * dx + dy * dy + dz * dz);
 			double yaw = -Math.atan2(dx, dz) / Math.PI * 180;
@@ -209,7 +225,7 @@ if(tick == nextTick) {
 			mc.player.connection.sendPacket(new CPacketPlayer.Rotation((float) yaw, (float) pitch, mc.player.onGround));
 			
 			Vec3d vec3d = mc.player.getPositionEyes(1.0F);
-	        Vec3d vec3d1 = Ref.getVectorForRotation((float) pitch, (float) yaw);
+	        Vec3d vec3d1 = Chung.getVectorForRotation((float) pitch, (float) yaw);
 	        Vec3d vec3d2 = vec3d.addVector(vec3d1.x * 4.5D, vec3d1.y * 4.5D, vec3d1.z * 4.5D);
 	        RayTraceResult rayTrace = mc.world.rayTraceBlocks(vec3d, vec3d2, false, false, true);
 			
@@ -225,29 +241,29 @@ if(tick == nextTick) {
 			else status = Status.WAITING_ON_OVERFLOW;
 			
 			prevDistance = 0D;
-			nextTick((Byte) Settings.get("tickdelay"));
+			nextTick = nextTick((Byte) Settings.get("tick_delay"));
 		} else {
 			if(distance == prevDistance) {
 				if(stuckCheck + distance * 5 > 127) stuckCheck = 127;
 				else stuckCheck += distance * 5;
 			}
 			prevDistance = distance;
-			nextTick((int) (distance * 5));
+			nextTick = nextTick((int) (distance * 5));
 		}
 		break;
 	case WAITING_ON_SOURCE:
 		if(mc.player.openContainer.windowId == 0) {
 			stuckCheck++;
-			nextTick(1);
+			nextTick = nextTick(1);
 			break;
 		} else {
 			stuckCheck = 0;
 			slot = -1;
 			moveSlot = 0;
 			status = Status.TAKING_SHULKERS;
-			log.debug("[AutoSort] Taking shulkers");
+			log.info("[AutoSort] Taking shulkers");
 			if((short) Settings.get("autosort", "chest_open_tick_delay") > 0) {
-				nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
+				nextTick = nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
 				break;
 			}
 		}
@@ -256,13 +272,14 @@ if(tick == nextTick) {
 			if(moveSlot == 0) {
 				status = Status.SOURCE_EMPTY_TIMEOUT;
 				if(sourceEmptyTimeout != 0) {
-					nextTick(sourceEmptyTimeout * 40);
+					nextTick = nextTick(sourceEmptyTimeout * 40);
 					break;
 				}
 			} else {
 				mc.player.closeScreen();
 				slot = 9;
 				status = Status.SEARCHING_STORAGE;
+				log.info("[AutoSort] Going to storage");
 			}
 		} else {
 			for(slot++; slot < (sourceDoubleChest ? 54 : 27); slot++) {
@@ -278,7 +295,7 @@ if(tick == nextTick) {
 				}
 			}
 		}
-		nextTick((Byte) Settings.get("tickdelay"));
+		nextTick = nextTick((Byte) Settings.get("tick_delay"));
 		break;
 	case SEARCHING_STORAGE:
 		if(mc.player.openContainer.windowId == 0) {
@@ -307,25 +324,25 @@ if(tick == nextTick) {
 			} else {
 				if(goToOverflow && overflow != null) {
 					status = Status.GOING_TO_OVERFLOW;
-					log.debug("[AutoSort] Going to overflow");
+					log.info("[AutoSort] Going to overflow");
 					destination = overflow;
 					destinationOffset = overflowFacing;
 					goToOverflow = false;
 				} else {
 					status = Status.GOING_TO_SOURCE;
-					log.debug("[AutoSort] Going to source");
+					log.info("[AutoSort] Going to source");
 					destination = source;
 					destinationOffset = sourceFacing;
 				}
 			}
 			mc.player.sendChatMessage("#goto ~" + (destination.offset(destinationOffset).getX() - (int) Math.floor(mc.player.posX)) + " ~" + (destination.getY() - (int) Math.floor(mc.player.posY)) + " ~" + (destination.offset(destinationOffset).getZ() - (int) Math.floor(mc.player.posZ)));
 		} else stuckCheck++;
-		nextTick(1);
+		nextTick = nextTick(1);
 		break;
 	case WAITING_ON_STORAGE:
 		if(mc.player.openContainer.windowId == 0) {
 			stuckCheck++;
-			nextTick(1);
+			nextTick = nextTick(1);
 			break;
 		} else {
 			stuckCheck = 0;
@@ -337,21 +354,21 @@ if(tick == nextTick) {
 				} else {
 					sortLocations.remove(unit);
 					if(sortLocations.size() == 0) {
-						Ref.sendMessage("[AutoSort] Storage full");
+						Chung.sendMessage("[AutoSort] Storage full");
 						stop();
-						Ref.runningActivities.remove(this);
-						break;
+						Chung.runningActivities.remove(this);
+						return true;
 					}
 					status = Status.SEARCHING_STORAGE;
 				}
-				nextTick(1);
+				nextTick = nextTick(1);
 				break;
 			} else {
 				moveSlot = (byte) (slot + (unit.isDoubleChest() ? 44 : 17));
 				status = Status.PUTTING_SHULKERS;
 				log.debug("Putting shulkers: " + unit.getName());
 				if((short) Settings.get("autosort", "chest_open_tick_delay") > 0) {
-					nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
+					nextTick = nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
 					break;
 				}
 			}
@@ -371,12 +388,12 @@ if(tick == nextTick) {
 			mc.player.closeScreen();
 			status = Status.SEARCHING_STORAGE;
 		} else if(mc.player.openContainer.getSlot(unit.isDoubleChest() ? 53 : 26).getHasStack()) status = Status.WAITING_ON_STORAGE;
-		nextTick((Byte) Settings.get("tickdelay"));
+		nextTick = nextTick((Byte) Settings.get("tick_delay"));
 		break;
 	case WAITING_ON_OVERFLOW:
 		if(mc.player.openContainer.windowId == 0) {
 			stuckCheck++;
-			nextTick(1);
+			nextTick = nextTick(1);
 			break;
 		} else {
 			stuckCheck = 0;
@@ -384,7 +401,7 @@ if(tick == nextTick) {
 			status = Status.DUMPING_SHULKERS;
 			log.debug("[AutoSort] Dumping shulkers");
 			if((short) Settings.get("autosort", "chest_open_tick_delay") > 0) {
-				nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
+				nextTick = nextTick((short) Settings.get("autosort", "chest_open_tick_delay"));
 				break;
 			}
 		}
@@ -404,12 +421,12 @@ if(tick == nextTick) {
 			slot = 9;
 			status = Status.SEARCHING_STORAGE;
 		} else if(mc.player.openContainer.getSlot(overflowDoubleChest ? 53 : 26).getHasStack() && mc.player.openContainer.getSlot(0).getHasStack()) {
-			Ref.sendMessage("[AutoSort] Overflow chest full");
+			Chung.sendMessage("[AutoSort] Overflow chest full");
 			stop();
-			Ref.runningActivities.remove(this);
-			break;
+			Chung.runningActivities.remove(this);
+			return true;
 		}
-		nextTick((Byte) Settings.get("tickdelay"));
+		nextTick = nextTick((Byte) Settings.get("tick_delay"));
 		break;
 	case SOURCE_EMPTY_TIMEOUT:
 		Slot thisSlot = mc.player.openContainer.getSlot(0);
@@ -423,45 +440,42 @@ if(tick == nextTick) {
 			}
 		}
 		mc.player.closeScreen();
-		Ref.sendMessage("[AutoSort] Finished sorting");
+		Chung.sendMessage("[AutoSort] Finished sorting");
 		stop();
-		Ref.runningActivities.remove(this);
-		break;
+		Chung.runningActivities.remove(this);
+		return true;
 	}
 	} catch(Exception e) {
-	Ref.sendMessage("Exception in AutoSort: " + e.getClass().getName() + (e.getMessage() == null ? "" : ": " + e.getMessage()));
 	log.catching(Level.ERROR, e);
+	Chung.sendMessage("Exception in AutoSort: " + e.getClass().getName() + (e.getMessage() == null ? "" : ": " + e.getMessage()));
 	stop();
-	Ref.runningActivities.remove(this);
+	Chung.runningActivities.remove(this);
+	return true;
 	}
 	if(stuckCheck == 127) {
-		log.warn("Autosort stuck\nStatus: {}\nStorage chests: {}\nDestination: {}\nPlayer window ID: {}\nDistance to destination: {}\nSlot: {}\nMoveSlot: {}", status, sortLocations, destination, mc.player.openContainer.windowId, prevDistance, slot, moveSlot);
-		Ref.sendMessage("Autosort stuck in status: " + status);
+		Chung.sendMessage("AutoSort stuck in status: " + status);
+		log.warn("AutoSort stuck\nStatus: {}\nStorage chests: {}\nDestination: {}\nPlayer window ID: {}\nDistance to destination: {}\nSlot: {}\nMoveSlot: {}", status, sortLocations, destination, mc.player.openContainer.windowId, prevDistance, slot, moveSlot);
 		stop();
-		Ref.runningActivities.remove(this);
-		Ref.runningActivities.add(new AutoSort(mc, sortLocations, source, sourceEmptyTimeout, overflow, log));
+		Chung.runningActivities.remove(this);
+		Chung.runningActivities.add(new AutoSort(mc, sortLocations, source, sourceEmptyTimeout, overflow, log));
+		return true;
 	}
 }
+return false;
 }
 
 @Override
 public void stop() {
 	log.info("[AutoSort] Stopping AutoSort");
 	if(status.equals(Status.GOING_TO_SOURCE) || status.equals(Status.GOING_TO_STORAGE) || status.equals(Status.GOING_TO_OVERFLOW)) mc.player.sendChatMessage("#cancel");
-	TickTimer.removeListener(this);
+}
+
+public static boolean isChest(int blockID) {
+	return (blockID == 54 || blockID == 146);
 }
 
 private enum Status {
 	GOING_TO_SOURCE, WAITING_ON_SOURCE, TAKING_SHULKERS, SEARCHING_STORAGE, GOING_TO_STORAGE, WAITING_ON_STORAGE, PUTTING_SHULKERS, GOING_TO_OVERFLOW, WAITING_ON_OVERFLOW, DUMPING_SHULKERS, SOURCE_EMPTY_TIMEOUT
-}
-
-private void nextTick(int tick) {
-	nextTick = TickTimer.current() + tick;
-	TickTimer.add(tick);
-}
-
-private static boolean isChest(int blockID) {
-	return (blockID == 54 || blockID == 146);
 }
 
 }

@@ -1,4 +1,4 @@
-package magnileve.chungamod.itemstorage;
+package magnileve.chungamod.auto.itemstorage;
 
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;

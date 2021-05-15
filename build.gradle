@@ -14,7 +14,7 @@ apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 
-version = '0.1.1'
+version = '0.2'
 group = 'magnileve.chungamod' // http://maven.apache.org/guides/mini/guide-naming-conventions.html
 archivesBaseName = 'chungamod'
 
@@ -56,6 +56,10 @@ minecraft {
     }
 }
 
+repositories {
+	maven { url 'https://jitpack.io' }
+}
+
 configurations {
 	jarLibs
 }
@@ -83,7 +87,8 @@ dependencies {
     // For more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
-    jarLibs files('libs\\discord-rpc.jar')
+    
+    jarLibs 'com.github.Vatuu:discord-rpc:1.6.2'
     
     implementation configurations.jarLibs
 }
